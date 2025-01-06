@@ -2,8 +2,9 @@
 #include <sstream>
 #include <vector>
 #include <string>
-
+#include <iostream>
 #pragma once
+
 
 struct Person {
     std::string firstName;
@@ -12,7 +13,12 @@ struct Person {
     double height;
     double weight;
 
+    // Конструктор по умолчанию
+    Person() : firstName(""), lastName(""), birthYear(0), height(0.0), weight(0.0) {}
 
+    // Конструктор с параметрами
+    Person(const std::string& firstName, const std::string& lastName, int birthYear, double height, double weight)
+        : firstName(firstName), lastName(lastName), birthYear(birthYear), height(height), weight(weight) {}
 
     friend std::ostream& operator<<(std::ostream& os, const Person& p) {
         os << p.firstName << " " << p.lastName << ", " 
@@ -25,8 +31,10 @@ struct Person {
     const std::string& GetLastName() const { return lastName; }
     int GetBirthYear() const { return birthYear; }
     double GetHeight() const { return height; }
-    double getHeight() const { return height; }
     double GetWeight() const { return weight; }
+    std::string GetName() const {
+        return firstName + " " + lastName;
+    }
 
     bool operator<=(const Person& other) const {
         if (firstName != other.firstName)
@@ -51,8 +59,8 @@ struct Person {
             return height < other.height;
         return weight < other.weight;
     }
-    
 };
+
 
 
 
