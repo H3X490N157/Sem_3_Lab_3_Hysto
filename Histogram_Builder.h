@@ -48,7 +48,7 @@ public:
         const int barSpacing = 20;
 
         int x = 50; // Начальная позиция
-        int yMax = 400; // Максимальная высота столбцов
+        int yMax = 1500; // Максимальная высота столбцов
         int maxCount = 0;
 
         // Найдем максимальное количество для масштаба
@@ -71,10 +71,6 @@ public:
             // Масштабирование высоты столбца
             int barHeight = static_cast<int>(bin.second) * yMax / maxCount;
 
-            // Выводим отладочную информацию
-            std::cout << "Bin: " << bin.first << ", Count: " << bin.second << ", BarHeight: " << barHeight << "\n";
-
-            // Создаем столбец
             sf::RectangleShape bar(sf::Vector2f(barWidth, barHeight));
             bar.setFillColor(sf::Color(100 + i * 40, 100 + i * 30, 200)); // Разные цвета для каждого столбца
             bar.setPosition(x, yMax - bar.getSize().y);  // Отрисовываем с учетом высоты окна

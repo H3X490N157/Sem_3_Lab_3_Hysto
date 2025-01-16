@@ -54,7 +54,7 @@ int main() {
     }
 
     // Открываем окно для визуализации
-    sf::RenderWindow window(sf::VideoMode(800, 600), "Гистограмма");
+    sf::RenderWindow window(sf::VideoMode(2000, 1500), "Гистограмма");
 
     while (window.isOpen()) {
         sf::Event event;
