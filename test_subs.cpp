@@ -1,135 +1,73 @@
-#include "Count_Subsequence.h"
-#include "IDictionary_Sequence.h"
-#include "sequence.h"
-#include <iostream>
-#include <string>
-#include <ncurses.h>
-#include <cassert>
+#include "Hystogram_Builder_For_Subs.h"
+#include <fstream>
 
-// Простой класс Sequence для строки
-class StringSequence : public Sequence<char> {
-private:
-    std::string data;
-
-public:
-    StringSequence(const std::string& str) : data(str) {}
-
-    char& GetFirst() override { return data.front(); }
-    char& GetLast() override { return data.back(); }
-    char& Get(int index) const override {
-        if (index < 0 || index >= data.size()) throw std::out_of_range("Index out of range");
-        return const_cast<char&>(data[index]);
+std::map<std::string, int> ConvertToMap(const IDictionary<std::string, int>& dictionary) {
+    std::map<std::string, int> result;
+    for (int i = 0; i < dictionary.GetLength(); ++i) {
+        auto pair = dictionary[i];
+        result[pair.first] = pair.second;
     }
-    char& operator[](int index) override { return Get(index); }
-    int GetLength() const override { return data.size(); }
-    void Append(char item) override { data += item; }
-    void Prepend(char item) override { data = item + data; }
-    void InsertAt(char item, int index) override {
-        if (index < 0 || index > data.size()) throw std::out_of_range("Index out of range");
-        data.insert(data.begin() + index, item);
-    }
-};
-
-// Функция для визуализации диаграммы
-void DisplayDiagram(const IDictionary<std::string, int>& counts) {
-    initscr();
-    noecho();
-    cbreak();
-
-    int row = 0, col = 0;
-    int max_count = 0;
-
-    // Найти максимальное количество для нормализации диаграммы
-    for (int i = 0; i < counts.GetLength(); ++i) {
-        auto temp = counts.Get(i); // Используем метод Get() для доступа
-        max_count = std::max(max_count, temp.second);
-    }
-
-    for (int i = 0; i < counts.GetLength(); ++i) {
-        auto temp = counts.Get(i); // Используем метод Get() для доступа
-        int normalized_length = (temp.second * 50) / max_count; // Нормализация длины диаграммы
-        mvprintw(row++, col, "%s: %d [%s]", temp.first.c_str(), temp.second,
-                 std::string(normalized_length, '*').c_str());
-        if (row >= LINES - 1) {
-            mvprintw(row, 0, "Press any key to continue...");
-            getch();
-            clear();
-            row = 0;
-        }
-    }
-
-    mvprintw(row, 0, "Press any key to exit...");
-    getch();
-    endwin();
+    return result;
 }
 
-// Функция автотестов
+void SaveResultsToCSV(const std::string& filename, const IDictionary<std::string, int>& results) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return;
+    }
+
+    file << "Subsequence,Count\n";  // Заголовки
+    for (int i = 0; i < results.GetLength(); ++i) {
+        auto pair = results[i];
+        file << pair.first << "," << pair.second << "\n";
+    }
+
+    file.close();
+    std::cout << "Results saved to " << filename << std::endl;
+}
+
+// Функция для выполнения теста с визуализацией и сохранением
+void RunTest(const StringSequence& sequence, int lmin, int lmax, const std::string& filename) {
+    auto result = CountSubsequences(sequence, lmin, lmax);
+
+    // Логгируем результаты в консоль
+    std::cout << "Results for sequence '" << sequence.GetData() << "':" << std::endl;
+    for (int i = 0; i < result.GetLength(); ++i) {
+        auto pair = result[i];
+        std::cout << pair.first << ": " << pair.second << std::endl;
+    }
+
+    // Сохраняем результаты в файл
+    SaveResultsToCSV(filename, result);
+
+    // Преобразуем IDictionary в std::map и строим гистограмму
+    HistogramBuilder builder;
+    builder.Build(ConvertToMap(result));
+
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Subsequence Counts");
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+        }
+
+        window.clear(sf::Color::White);
+        builder.DrawHistogram(window);
+        window.display();
+    }
+}
+
 void RunTests() {
-    {
-        // Тест 1
-        StringSequence sequence("ababc");
-        int lmin = 2, lmax = 3;
-        auto result = CountSubsequences(sequence, lmin, lmax);
-
-        assert(result.Get("ab") == 2);
-        assert(result.Get("ba") == 1);
-        assert(result.Get("bc") == 1);
-        assert(result.Get("abc") == 1);
-
-        DisplayDiagram(result);
-    }
-
-    {
-        // Тест 2
-        StringSequence sequence("aaaa");
-        int lmin = 1, lmax = 2;
-        auto result = CountSubsequences(sequence, lmin, lmax);
-
-        assert(result.Get("a") == 4);
-        assert(result.Get("aa") == 3);
-
-        DisplayDiagram(result);
-    }
-
-    {
-        // Тест 3
-        StringSequence sequence("abcde");
-        int lmin = 2, lmax = 3;
-        auto result = CountSubsequences(sequence, lmin, lmax);
-
-        assert(result.Get("ab") == 1);
-        assert(result.Get("bc") == 1);
-        assert(result.Get("cd") == 1);
-        assert(result.Get("de") == 1);
-        assert(result.Get("abc") == 1);
-        assert(result.Get("bcd") == 1);
-
-        DisplayDiagram(result);
-    }
+    RunTest(StringSequence("ababc"), 2, 3, "results_subs_ababc.csv");
+    RunTest(StringSequence("aaaa"), 1, 2, "results_subs_aaaa.csv");
+    RunTest(StringSequence("abcde"), 2, 3, "results_subs_abcde.csv");
+    RunTest(StringSequence("abcdefg"), 1, 4, "results_subs_abcdefg.csv");
+    RunTest(StringSequence("abcabcabc"), 1, 3, "results_subs_abcabcabc.csv");
 
     std::cout << "All tests passed successfully!" << std::endl;
-}
-
-// Функция для выполнения пользовательского ввода
-void ManualInput() {
-    std::string input;
-    int lmin, lmax;
-
-    std::cout << "Enter input string: ";
-    std::cin >> input;
-    std::cout << "Enter minimum length (lmin): ";
-    std::cin >> lmin;
-    std::cout << "Enter maximum length (lmax): ";
-    std::cin >> lmax;
-
-    try {
-        StringSequence sequence(input);
-        auto result = CountSubsequences(sequence, lmin, lmax);
-
-        DisplayDiagram(result);
-    } catch (const std::exception& ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
-    }
 }
 
 // Главное меню программы
@@ -146,7 +84,7 @@ int main() {
         RunTests();
         break;
     case 2:
-        ManualInput();
+        std::cerr << "Manual input is not supported yet." << std::endl;
         break;
     default:
         std::cerr << "Invalid choice. Exiting..." << std::endl;
@@ -155,3 +93,4 @@ int main() {
 
     return 0;
 }
+

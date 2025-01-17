@@ -32,6 +32,11 @@ public:
     std::pair<Key, Value>& operator[](int index) override {
         return Get(index);
     }
+    
+    const std::pair<Key, Value>& operator[](int index) const {
+        if (index < 0 || index >= items.size()) throw std::out_of_range("Index out of range");
+        return items[index];
+        }
 
     int GetLength() const override {
         return items.size();

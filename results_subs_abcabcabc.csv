@@ -1,0 +1,10 @@
+Subsequence,Count
+a,3
+b,3
+c,3
+ab,3
+bc,3
+ca,2
+abc,3
+bca,2
+cab,2
