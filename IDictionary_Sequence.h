@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+#include <map>
 
 template <typename Key, typename Value>
 class IDictionary : public Sequence<std::pair<Key, Value>> {
@@ -90,5 +91,14 @@ public:
                     items.end());
     }
 };
+
+std::map<std::string, int> ConvertToMap(const IDictionary<std::string, int>& dictionary) {
+    std::map<std::string, int> result;
+    for (int i = 0; i < dictionary.GetLength(); ++i) {
+        auto pair = dictionary[i];
+        result[pair.first] = pair.second;
+    }
+    return result;
+}
 
 #endif // IDICTIONARY_H
