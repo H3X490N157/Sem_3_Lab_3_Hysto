@@ -1,14 +1,15 @@
 #ifndef HISTOGRAM_BUILDER_H
 #define HISTOGRAM_BUILDER_H
 
-#include "IDictionary_Sequence.h"
+#include "IDictionary.h"
 #include "person.h"
 #include <SFML/Graphics.hpp>
 #include <cmath>
 #include <fstream>
 #include <vector>
 #include <string>
-#include <iostream>  // Для логирования
+#include <iostream>
+#include <iomanip>  // Для форматирования строк
 
 class HistogramBuilder {
 private:
@@ -20,7 +21,13 @@ public:
 
         // Инициализация диапазонов
         for (double rangeStart = minRange; rangeStart < maxRange; rangeStart += step) {
-            std::string bin = "[" + std::to_string(rangeStart) + "-" + std::to_string(rangeStart + step) + ")";
+            // Форматируем диапазоны до 2 знаков после запятой
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2) << rangeStart;
+            std::ostringstream ossEnd;
+            ossEnd << std::fixed << std::setprecision(2) << (rangeStart + step);  // Форматируем верхнюю границу
+
+            std::string bin = "[" + oss.str() + "-" + ossEnd.str() + ")";
             histogram.Add(bin, 0);
         }
 
@@ -33,25 +40,37 @@ public:
             else if (attribute == "weight")
                 value = person.GetWeight();
             else
-                throw std::runtime_error("Unsupported attribute");
+                throw std::runtime_error("Ошибка");
 
             if (value >= minRange && value < maxRange) {
                 double rangeStart = minRange + std::floor((value - minRange) / step) * step;
-                std::string bin = "[" + std::to_string(rangeStart) + "-" + std::to_string(rangeStart + step) + ")";
+                
+                // Форматируем диапазоны до 2 знаков после запятой
+                std::ostringstream oss;
+                oss << std::fixed << std::setprecision(2) << rangeStart;
+                std::ostringstream ossEnd;
+                ossEnd << std::fixed << std::setprecision(2) << (rangeStart + step);  // Форматируем верхнюю границу
+                
+                std::string bin = "[" + oss.str() + "-" + ossEnd.str() + ")";
+                
                 histogram.Add(bin, histogram.Get(bin) + 1);
             }
         }
     }
 
     void DrawHistogram(sf::RenderWindow& window) {
-        const int barWidth = 50;
-        const int barSpacing = 20;
+        const int barWidth = 40;       // Уменьшаем ширину столбцов
+        const int barSpacing = 15;     // Уменьшаем промежуток между столбцами
+        const int yMax = 800;          // Максимальная высота столбцов
+        const int yOffset = 60;        // Смещение столбцов от нижней границы (вместо 0)
+        const int labelYOffset = 25;   // Смещение для подписи диапазона (вниз от нижней границы)
+        const int valueLabelYOffset = 25; // Смещение для подписи количества элементов (вверх от нижней границы)
 
-        int x = 50; // Начальная позиция
-        int yMax = 1500; // Максимальная высота столбцов
+        int x = 50;                    // Начальная позиция по оси X
+
         int maxCount = 0;
 
-        // Найдем максимальное количество для масштаба
+        // Найдем максимальное количество для масштабирования
         for (int i = 0; i < histogram.GetLength(); ++i) {
             auto bin = histogram.Get(i);
             if (bin.second > maxCount)
@@ -64,17 +83,36 @@ public:
             return;
         }
 
+        // Шрифт для подписей
+        sf::Font font;
+        if (!font.loadFromFile("arial.ttf")) {
+            std::cerr << "Ошибка загрузки шрифта.\n";
+            return;
+        }
+
         // Рисуем гистограмму
         for (int i = 0; i < histogram.GetLength(); ++i) {
             auto bin = histogram.Get(i);
 
             // Масштабирование высоты столбца
-            int barHeight = static_cast<int>(bin.second) * yMax / maxCount;
+            int barHeight = static_cast<int>(bin.second) * (yMax - yOffset) / maxCount;
 
             sf::RectangleShape bar(sf::Vector2f(barWidth, barHeight));
             bar.setFillColor(sf::Color(100 + i * 40, 100 + i * 30, 200)); // Разные цвета для каждого столбца
-            bar.setPosition(x, yMax - bar.getSize().y);  // Отрисовываем с учетом высоты окна
+            bar.setPosition(x, yMax - bar.getSize().y - yOffset);  // Отрисовываем с учетом высоты окна
             window.draw(bar);
+
+            // Добавляем текст с диапазоном (нижняя граница - верхняя граница)
+            sf::Text label(bin.first, font, 10);  // Уменьшаем размер шрифта для диапазона
+            label.setFillColor(sf::Color::White);
+            label.setPosition(x, yMax - labelYOffset); // Фиксированное положение под столбцом
+            window.draw(label);
+
+            // Добавляем текст с количеством элементов (число над столбцом)
+            sf::Text valueLabel(std::to_string(bin.second), font, 10);  // Уменьшаем размер шрифта для значения
+            valueLabel.setFillColor(sf::Color::White);
+            valueLabel.setPosition(x + barWidth / 4, yMax - barHeight - valueLabelYOffset); // Фиксированное положение над столбцом
+            window.draw(valueLabel);
 
             // Сдвигаем позицию для следующего столбца
             x += barWidth + barSpacing;

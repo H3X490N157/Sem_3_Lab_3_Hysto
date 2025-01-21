@@ -1,4 +1,7 @@
+#pragma once
+
 #include "sequence.h"
+
 
 class StringSequence : public Sequence<char> {
 private:

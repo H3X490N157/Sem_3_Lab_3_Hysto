@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IDictionary_Sequence.h"
+#include "IDictionary.h"
 #include "String_Sequence.h"
 #include <string>
 #include <vector>

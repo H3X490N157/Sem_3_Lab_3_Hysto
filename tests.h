@@ -1,221 +1,166 @@
-#include <chrono>
-#include <iomanip>
-#include "person.h"
-#include "csv_writer.h"
+#include "csw_writer_new.h"
+#include "Count_Subsequence.h"
 
 
-template <typename T>
-void checkSorted(const Sequence<T>* seq) {
-    for (int i = 1; i < seq->GetLength(); ++i) {
-        assert(seq->Get(i-1) <= seq->Get(i) && "Ошибка сортировки!");
-    }
-    std::cout << "Успешно отсортировано\n";
-}
+// Функция для выполнения теста с визуализацией и сохранением
+void RunTest(const StringSequence& sequence, int lmin, int lmax, const std::string& filename) {
+    auto result = CountSubsequences(sequence, lmin, lmax);
 
-
-template <typename T>
-void testSorting(ISorter<T>& sorter, const char* sorterName) {
-    std::cout << "Проверка " << sorterName << "...\n";
-
-    ArraySequence<T> emptySequence;
-    sorter.Sort(&emptySequence, compare);
-    checkSorted(&emptySequence);
-    printSequence(&emptySequence);
-
-    ArraySequence<T> singleElementSequence;
-    singleElementSequence.Append(42);
-    sorter.Sort(&singleElementSequence, compare);
-    checkSorted(&singleElementSequence);
-    printSequence(&singleElementSequence);
-
-    ArraySequence<T> sortedSequence;
-    sortedSequence.Append(1);
-    sortedSequence.Append(2);
-    sortedSequence.Append(3);
-    sorter.Sort(&sortedSequence, compare);
-    checkSorted(&sortedSequence);
-    printSequence(&sortedSequence);
-
-    ArraySequence<T> reversedSequence;
-    reversedSequence.Append(3);
-    reversedSequence.Append(2);
-    reversedSequence.Append(1);
-    sorter.Sort(&reversedSequence, compare);
-    checkSorted(&reversedSequence);
-    printSequence(&reversedSequence);
-
-    ArraySequence<T> randomSequence;
-    randomSequence.Append(10);
-    randomSequence.Append(2);
-    randomSequence.Append(8);
-    randomSequence.Append(5);
-    randomSequence.Append(3);
-    randomSequence.Append(-2281337);
-    sorter.Sort(&randomSequence, compare);
-    checkSorted(&randomSequence);
-    printSequence(&randomSequence);
-
-}
-
-
-void testSorting(ISorter<std::string>& sorter, const char* sorterName) {
-    std::cout << "Testing " << sorterName << " with strings...\n";
-
-    ArraySequence<std::string> emptySequence;
-    sorter.Sort(&emptySequence, compare<std::string>);
-    checkSorted(&emptySequence);
-    printSequence(&emptySequence);
-
-    ArraySequence<std::string> singleElementSequence;
-    singleElementSequence.Append("I am alone. HELLp");
-    sorter.Sort(&singleElementSequence, compare<std::string>);
-    checkSorted(&singleElementSequence);
-    printSequence(&singleElementSequence);
-
-    ArraySequence<std::string> reversedSequence;
-    reversedSequence.Append("Cherry");
-    reversedSequence.Append("Banana");
-    reversedSequence.Append("Apple");
-    sorter.Sort(&reversedSequence, compare<std::string>);
-    checkSorted(&reversedSequence);
-    printSequence(&reversedSequence);
-
-    ArraySequence<std::string> randomSequence;
-    randomSequence.Append("Zebra");
-    randomSequence.Append("Apple");
-    randomSequence.Append("Orange");
-    randomSequence.Append("Banana");
-    randomSequence.Append("Lemon");
-    randomSequence.Append("Берёзовый сок");
-    randomSequence.Append("Я не люблю BTS");
-    sorter.Sort(&randomSequence, compare<std::string>);
-    checkSorted(&randomSequence);
-    printSequence(&randomSequence);
-}
-
-
-template <typename T>
-void testUserSorting(ISorter<T>& sorter) {
-    ArraySequence<T> sequence_test;
-    T x;
-
-    std::cout << "Введите элементы последовательности (введите 0 для завершения ввода):\n";
-    while (true) {
-        std::cin >> x;
-        if (x == 0) break;
-        sequence_test.Append(x);
+    // Логгируем результаты в консоль
+    std::cout << "Results for sequence '" << sequence.GetData() << "':" << std::endl;
+    for (int i = 0; i < result.GetLength(); ++i) {
+        auto pair = result[i];
+        std::cout << pair.first << ": " << pair.second << std::endl;
     }
 
-    std::cout << "Исходная последовательность:\n";
-    printSequence(&sequence_test);
+    SaveResultsToCSV(filename, result);
 
-    sorter.Sort(&sequence_test, compare<T>);
-    std::cout << "Отсортированная последовательность:\n";
-    printSequence(&sequence_test);
+    HistogramBuilder builder;
+    builder.Build(result); // Используем IDictionary напрямую
 
-    checkSorted(&sequence_test);
-}
-
-void testUserSortingString(ISorter<std::string>& sorter) {
-    ArraySequence<std::string> sequence_test;
-    std::string input;
-
-    std::cout << "Введите строки для сортировки (введите пустую строку для завершения ввода):\n";
-    std::cin.ignore(); // Очистка потока
-    while (true) {
-        std::getline(std::cin, input);
-        if (input.empty()) break;
-        sequence_test.Append(input);
-    }
-
-    std::cout << "Исходная последовательность:\n";
-    printSequence(&sequence_test);
-
-    sorter.Sort(&sequence_test, compare<std::string>);
-    std::cout << "Отсортированная последовательность:\n";
-    printSequence(&sequence_test);
-
-    checkSorted(&sequence_test);
-}
-
-template <typename T>
-void measureSortingTime(ISorter<T>& sorter, ArraySequence<T>& sequence, const std::string& algorithmName) {
-    auto start = std::chrono::high_resolution_clock::now();
-    sorter.Sort(&sequence, comparePersons);  // Сортировка
-    auto end = std::chrono::high_resolution_clock::now();
-    
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << algorithmName << " завершен за " << duration.count() << " миллисекунд.\n";
-}
-
-void testPersonSorting() {
-    std::vector<Person> persons = readPersonsFromFile("persons.csv");
-    if (persons.empty()) {
-        std::cerr << "Нет данных для теста." << std::endl;
-        return;
-    }
-
-    ArraySequence<Person> personSequence;
-    for (const auto& person : persons) {
-        personSequence.Append(person);
-    }
-
-    HeapSorter<Person> heapSorter;
-    ShellSorter<Person> shellSorter;
-    QuickSorter<Person> quickSorter;
-
-
-    ArraySequence<Person> personSequenceForHeapSort = personSequence;  
-    measureSortingTime(heapSorter, personSequenceForHeapSort, "HeapSort");
-
-    ArraySequence<Person> personSequenceForShellSort = personSequence;  
-    measureSortingTime(shellSorter, personSequenceForShellSort, "ShellSort");
-
-    ArraySequence<Person> personSequenceForQuickSort = personSequence; 
-    measureSortingTime(quickSorter, personSequenceForQuickSort, "QuickSort");
-
-    writeResultsToCSV(personSequenceForQuickSort, "results.csv");
-
-    std::cout << "Тестирование завершено.\n";
-}
-
-void testUserSortingPersons(ISorter<Person>& sorter) {
-    std::cout << "Выберите способ ввода данных: (1 - вручную, 2 - файл): ";
-    int inputChoice;
-    std::cin >> inputChoice;
-    ArraySequence<Person> persons;
-    if (inputChoice == 1) {
-        std::cout << "Введите количество записей: ";
-        int n;
-        std::cin >> n;
-        std::cout << "Вводите данные в формате: Имя Фамилия Год_Рождения Рост Вес\n";
-        while (n--) {
-            std::string firstName, lastName;
-            int birthYear;
-            double height, weight;
-            std::cin >> firstName >> lastName >> birthYear >> height >> weight;
-            persons.Append({firstName, lastName, birthYear, height, weight});
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Подсчёт:");
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
         }
-    } else {
-        std::cout << "Введите имя файла с данными о людях (CSV: Имя,Фамилия,ГодРождения,Рост,Вес): ";
-        std::string filename;
-        std::cin >> filename;
-        std::vector<Person> vectorPersons = readPersonsFromFile(filename);
-        for (const auto& person : vectorPersons) {
-            persons.Append(person);
-        }
-    }
-    std::cout << "Сортировка началась...\n";
-    sorter.Sort(&persons, comparePersons);
 
-    // Вывод результата
-    std::cout << "Сортировка завершена. Результат:\n";
-    for (int i = 0; i < persons.GetLength(); ++i) {
-        const Person& person = persons.Get(i);
-        std::cout << person.GetFirstName() << " "
-                  << person.GetLastName() << ", "
-                  << person.GetBirthYear() << ", "
-                  << person.GetHeight() << "m, "
-                  << person.GetWeight() << "kg" << std::endl;
+        window.clear(sf::Color::White);
+        builder.DrawHistogram(window);
+        window.display();
     }
+}
+
+void RunTests() {
+    // Тест 1
+    IDictionary<std::string, int> result1 = CountSubsequences(StringSequence("ababc"), 2, 3);
+    assert(result1.Get("ab") == 2);
+    assert(result1.Get("ba") == 1);
+    assert(result1.Get("abc") == 1);
+    assert(result1.Get("bab") == 1);
+
+    // Преобразуем в map и строим гистограмму
+    HistogramBuilder builder1;
+    builder1.Build(result1);
+    sf::RenderWindow window1(sf::VideoMode(800, 600), "Тест");
+    while (window1.isOpen()) {
+        sf::Event event;
+        while (window1.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window1.close();
+            }
+        }
+
+        window1.clear(sf::Color::White);
+        builder1.DrawHistogram(window1);
+        window1.display();
+    }
+
+    // Тест 2
+    IDictionary<std::string, int> result2 = CountSubsequences(StringSequence("aaaa"), 1, 2);
+    assert(result2.Get("a") == 4);
+    assert(result2.Get("aa") == 3);
+
+    // Преобразуем в map и строим гистограмму
+    HistogramBuilder builder2;
+    builder2.Build(result2);
+    sf::RenderWindow window2(sf::VideoMode(800, 600), "Тест 2");
+    while (window2.isOpen()) {
+        sf::Event event;
+        while (window2.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window2.close();
+            }
+        }
+
+        window2.clear(sf::Color::White);
+        builder2.DrawHistogram(window2);
+        window2.display();
+    }
+
+    // Тест 3
+    IDictionary<std::string, int> result3 = CountSubsequences(StringSequence("abcde"), 2, 3);
+    assert(result3.Get("ab") == 1);
+    assert(result3.Get("bc") == 1);
+    assert(result3.Get("abc") == 1);
+
+    // Преобразуем в map и строим гистограмму
+    HistogramBuilder builder3;
+    builder3.Build(result3);
+    sf::RenderWindow window3(sf::VideoMode(800, 600), "Тест 3");
+    while (window3.isOpen()) {
+        sf::Event event;
+        while (window3.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window3.close();
+            }
+        }
+
+        window3.clear(sf::Color::White);
+        builder3.DrawHistogram(window3);
+        window3.display();
+    }
+
+    // Тест 4
+    IDictionary<std::string, int> result4 = CountSubsequences(StringSequence("abcdefg"), 1, 4);
+    assert(result4.Get("ab") == 1);
+
+    // Преобразуем в map и строим гистограмму
+    HistogramBuilder builder4;
+    builder4.Build(result4);
+    sf::RenderWindow window4(sf::VideoMode(800, 600), "Тест 4");
+    while (window4.isOpen()) {
+        sf::Event event;
+        while (window4.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window4.close();
+            }
+        }
+
+        window4.clear(sf::Color::White);
+        builder4.DrawHistogram(window4);
+        window4.display();
+    }
+
+    // Тест 5
+    IDictionary<std::string, int> result5 = CountSubsequences(StringSequence("abcabcabc"), 1, 3);
+    assert(result5.Get("abc") == 3);
+
+    // Преобразуем в map и строим гистограмму
+    HistogramBuilder builder5;
+    builder5.Build(result5);
+    sf::RenderWindow window5(sf::VideoMode(800, 600), "Тест 5");
+    while (window5.isOpen()) {
+        sf::Event event;
+        while (window5.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window5.close();
+            }
+        }
+
+        window5.clear(sf::Color::White);
+        builder5.DrawHistogram(window5);
+        window5.display();
+    }
+
+    std::cout << "Все тесты пройдены успешно!" << std::endl;
+}
+
+void ManualInput() {
+    std::string inputString;
+    int lmin, lmax;
+    std::string filename;
+
+    std::cout << "Введите строку: ";
+    std::cin >> inputString;
+
+    std::cout << "Введите минимальную длину подпоследовательности (lmin): ";
+    std::cin >> lmin;
+
+    std::cout << "Введите максимальную длину подпоследовательности (lmax): ";
+    std::cin >> lmax;
+
+    RunTest(StringSequence(inputString), lmin, lmax, "result.csv");
 }
